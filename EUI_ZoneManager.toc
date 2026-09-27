@@ -1,0 +1,22 @@
+## Interface: 120000, 120001, 120005, 120007, 120100
+## Title: Zone Manager |cff888888for EllesmereUI|r
+## Notes: Graphics profiles and addon sets per zone type (open world, dungeon, Mythic+, raid, delve, PvP). Unofficial companion for EllesmereUI; lives in its options.
+## Author: deuxzeus
+## Version: 2.1.0
+## Dependencies: EllesmereUI
+## SavedVariables: EUIZoneManagerDB
+
+Core\Init.lua
+Core\Context.lua
+Core\Bridge.lua
+
+Modules\Graphics\Data.lua
+Modules\Graphics\Graphics.lua
+Modules\Graphics\Options.lua
+
+Modules\Addons\Addons.lua
+Modules\Addons\Options.lua
+
+Core\Overview.lua
+Core\Group.lua
+Core\Events.lua
