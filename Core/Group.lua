@@ -25,6 +25,10 @@ ZM.Group = GR
 local frame = CreateFrame("Frame")
 local wasInGroup = false
 local pendingCtx          -- from an accepted invite, until the roster shows the group
+-- After a login/reload the roster lags behind: the saved group type counts until the
+-- delayed check has really looked (else the zone's set is asked for, then the group's
+-- again after that reload, and so on).
+GR.settling = false
 
 local function FirstActivity(info)
     if type(info) ~= "table" then return nil end
@@ -56,6 +60,8 @@ end
 
 local function Check()
     local inGroup = IsInGroup()
+    -- Not in the group yet right after a reload: wait for the delayed check.
+    if GR.settling and not inGroup then return end
     if inGroup ~= wasInGroup then
         wasInGroup = inGroup
         if inGroup then
@@ -100,10 +106,17 @@ function GR.Update()
         -- moment behind login, so a stale one (group left while offline) is only
         -- dropped once a later check really finds no group.
         wasInGroup = IsInGroup() or ZM.db.groupCtx ~= nil
-        if ZM.db.groupCtx then C_Timer.After(5, Check) end
+        if ZM.db.groupCtx then
+            GR.settling = true
+            C_Timer.After(5, function()
+                GR.settling = false
+                Check()
+            end)
+        end
     else
         frame:UnregisterAllEvents()
         pendingCtx = nil
+        GR.settling = false
     end
 end
 

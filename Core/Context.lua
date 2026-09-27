@@ -90,6 +90,7 @@ end
 function ZM.GroupContext()
     local d = ZM.db
     if not (d and d.groupMode and d.groupCtx) or ZM.simContext then return nil end
-    if not IsInGroup() then return nil end
+    -- Right after a reload the roster may still be empty: keep the saved group type.
+    if not IsInGroup() and not (ZM.Group and ZM.Group.settling) then return nil end
     return d.groupCtx
 end

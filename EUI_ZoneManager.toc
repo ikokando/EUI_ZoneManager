@@ -2,7 +2,7 @@
 ## Title: Zone Manager |cff888888for EllesmereUI|r
 ## Notes: Graphics profiles and addon sets per zone type (open world, dungeon, Mythic+, raid, delve, PvP). Unofficial companion for EllesmereUI; lives in its options.
 ## Author: deuxzeus
-## Version: 2.1.0
+## Version: 2.1.1
 ## Dependencies: EllesmereUI
 ## SavedVariables: EUIZoneManagerDB
 

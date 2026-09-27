@@ -133,6 +133,13 @@ function AD.Diff(set)
     return off, on
 end
 
+-- Are the set's addons already loaded as the set wants them? Then a reload changes
+-- nothing and there is nothing to ask.
+function AD.IsSetLoaded(set)
+    local off, on = AD.Diff(set)
+    return #off + #on == 0
+end
+
 -- Character first (what Blizzard's own list does in game), then by name, then for all
 -- characters as a last resort. Every write is read back.
 local function SetFlag(name, want)
@@ -354,6 +361,7 @@ function AD.ContextText(ctx)
 end
 
 local declinedKey   -- "context:set" answered with "Not now"; a new zone type clears it
+local promptKey     -- "context:set" of the reload prompt already scheduled or shown
 
 local function ShowReloadPrompt(ctx, setName, off, on)
     local lines = {}
@@ -366,7 +374,8 @@ local function ShowReloadPrompt(ctx, setName, off, on)
         E:ShowConfirmPopup({
             title = ZM.TITLE, message = msg, confirmText = "Reload", cancelText = "Not now",
             onConfirm = AD.ReloadNow,
-            onCancel = function() declinedKey = ctx .. ":" .. setName end,
+            onCancel = function() declinedKey = ctx .. ":" .. setName; promptKey = nil end,
+            onDismiss = function() promptKey = nil end,
         })
     else
         ZM.Print(msg:gsub("\n\n", " ") .. " Type /reload.")
@@ -437,7 +446,7 @@ end
 function AD.OnContext(ctx, reason, force, entry)
     ctx = AD.ContextFor(ctx)
     local name = AD.SetFor(ctx)
-    if ctx ~= AD.lastContext then declinedKey = nil end
+    if ctx ~= AD.lastContext then declinedKey, promptKey = nil, nil end
     local changedSet = name ~= AD.current
     AD.lastContext = ctx
     AD.current = name
@@ -479,18 +488,27 @@ function AD.OnContext(ctx, reason, force, entry)
     local off, on = AD.Diff(set)
     local n = #off + #on
     entry.addonsPending = n
-    if n == 0 then return end
+    -- The set's addons are already loaded: no reload, no prompt.
+    if n == 0 then promptKey = nil; return end
 
     if ZM.db.announce and ZM.IsAutomatic(reason) then
         ZM.Print(("%s: addon set |cffffffff%s|r, reload needed (%d addon(s))."):format(AD.ContextText(ctx), name, n))
     end
     local key = ctx .. ":" .. name
-    if force or declinedKey ~= key then
+    -- Only the user's own actions ask again after "Not now"; group events, combat end
+    -- etc. respect it. And one prompt per context:set, not one per event.
+    local userAsked = force and not ZM.IsAutomatic(reason)
+    if userAsked or (declinedKey ~= key and promptKey ~= key) then
+        promptKey = key
         -- A beat after the loading screen, so the popup is not lost behind it.
         C_Timer.After(0.5, function()
-            if AD.lastContext == ctx and AD.current == name and not InCombatLockdown() then
+            if promptKey ~= key then return end
+            if AD.lastContext == ctx and AD.current == name and not InCombatLockdown()
+               and not AD.IsSetLoaded(set) then
                 local o2, n2 = AD.Diff(set)
-                if #o2 + #n2 > 0 then ShowReloadPrompt(ctx, name, o2, n2) end
+                ShowReloadPrompt(ctx, name, o2, n2)
+            else
+                promptKey = nil
             end
         end)
     end
